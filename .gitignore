@@ -45,5 +45,8 @@ Thumbs.db
 *.db
 *.sqlite3
 
+# Auto-PR Creator tracking
+.processed_incidents.json
+
 # Audio files
 *.mp3
