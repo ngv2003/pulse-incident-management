@@ -1,0 +1,177 @@
+---
+# checkout-svc — simple nginx-based mock
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-svc
+  labels:
+    app: checkout-svc
+    pulse: monitored
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-svc
+  template:
+    metadata:
+      labels:
+        app: checkout-svc
+    spec:
+      containers:
+      - name: checkout-svc
+        image: python:3.11-slim
+        command: ["python3", "-c"]
+        args:
+        - |
+          import http.server, json, os, time
+          from datetime import datetime
+          class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_GET(self):
+              if self.path == '/health':
+                body = json.dumps({'service':'checkout-svc','status':'healthy','timestamp':datetime.utcnow().isoformat()}).encode()
+              elif self.path == '/metrics':
+                body = json.dumps({'service':'checkout-svc','error_rate_per_min':0,'latency_p99_ms':45,'memory_percent':42,'cpu_percent':18,'timestamp':datetime.utcnow().isoformat()}).encode()
+              else:
+                body = b'{"status":"ok"}'
+              self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(body)
+          http.server.HTTPServer(('0.0.0.0',8080),H).serve_forever()
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-svc
+spec:
+  selector:
+    app: checkout-svc
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+# inventory-svc — this is the one BOB will restart
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-svc
+  labels:
+    app: inventory-svc
+    pulse: monitored
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-svc
+  template:
+    metadata:
+      labels:
+        app: inventory-svc
+    spec:
+      containers:
+      - name: inventory-svc
+        image: python:3.11-slim
+        command: ["python3", "-c"]
+        args:
+        - |
+          import http.server, json
+          from datetime import datetime
+          class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_GET(self):
+              if self.path == '/health':
+                body = json.dumps({'service':'inventory-svc','status':'healthy','timestamp':datetime.utcnow().isoformat()}).encode()
+              elif self.path == '/metrics':
+                body = json.dumps({'service':'inventory-svc','error_rate_per_min':0,'latency_p99_ms':80,'memory_percent':55,'cpu_percent':22,'timestamp':datetime.utcnow().isoformat()}).encode()
+              else:
+                body = b'{"status":"ok"}'
+              self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(body)
+          http.server.HTTPServer(('0.0.0.0',8080),H).serve_forever()
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-svc
+spec:
+  selector:
+    app: inventory-svc
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+# db-primary
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-primary
+  labels:
+    app: db-primary
+    pulse: monitored
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-primary
+  template:
+    metadata:
+      labels:
+        app: db-primary
+    spec:
+      containers:
+      - name: db-primary
+        image: python:3.11-slim
+        command: ["python3", "-c"]
+        args:
+        - |
+          import http.server, json
+          from datetime import datetime
+          class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_GET(self):
+              if self.path == '/health':
+                body = json.dumps({'service':'db-primary','status':'healthy','timestamp':datetime.utcnow().isoformat()}).encode()
+              elif self.path == '/metrics':
+                body = json.dumps({'service':'db-primary','error_rate_per_min':0,'latency_p99_ms':12,'memory_percent':60,'cpu_percent':25,'timestamp':datetime.utcnow().isoformat()}).encode()
+              else:
+                body = b'{"status":"ok"}'
+              self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(body)
+          http.server.HTTPServer(('0.0.0.0',8080),H).serve_forever()
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-primary
+spec:
+  selector:
+    app: db-primary
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

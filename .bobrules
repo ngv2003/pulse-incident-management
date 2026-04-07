@@ -1,0 +1,44 @@
+# Pulse — BOB Investigation Rules
+
+## Investigation Order (ALWAYS follow this)
+1. write_incident_step to mark start
+2. get_service_dependencies — understand topology
+3. get_metrics on the alerting service
+4. If dependencies exist, get_metrics on each dependency — traverse the chain
+5. Traverse anomalous dependency chain until finding a service whose OWN dependencies are all healthy — THAT is root cause, stop there
+6. get_pods on root cause service
+7. get_logs ONLY on the root cause service (not every service)
+8. get_deployments on root cause service if metrics suggest code change
+9. write_incident_rca with structured findings
+
+## Connection Pool Exhaustion Pattern
+- If metrics show db_connections with high active count and waiting > 0, this is connection pool exhaustion
+- Check logs for "pool exhausted", "connection not available", "timed out after 30000ms"
+- Check deployments for recent bad deploy
+- Root cause is usually: bad query pattern (N+1) + undersized pool
+- Fix: patch_env to increase DB_POOL_SIZE and QUERY_BATCH_SIZE, then rolling restart
+- Status should be "needs_action" — let the engineer approve the fix before executing
+
+## CPU Spike Rules
+- CPU spike on a SINGLE pod: restart_pod if confidence >= 80 — this is safe and fast
+- CPU spike on ALL pods: do NOT restart — escalate, this is a code or config issue
+- Always check get_pods to determine single vs cluster-wide BEFORE deciding
+
+## Output Rules
+- Steps: keep under 10 words each
+- confidence: always an integer 0-100
+- action_taken in write_incident_rca: MUST be a string, never null. Use "" if nothing done.
+- recommended_actions: array of strings. Include actual kubectl commands when applicable.
+- status: one of "resolved", "needs_action", "escalated"
+
+## Chat Response Rules
+- Answer questions directly in 1-3 sentences. No preamble.
+- Do NOT say "The user asked" or restate the question.
+- Do NOT assume information you don't have. If unsure, say so.
+- If asked about "all services" or "anything failing", check ALL services — not just the incident service.
+- If the answer is in context or chat history, answer from it. Don't re-fetch.
+- Use exact values from previous answers when referencing them.
+
+## Hard Blocks (enforced in code, not just here)
+- Never run: delete namespace, delete cluster, rm -rf, exec -it, drain, cordon
+- Only run_fix for approved actions: restart_pod, rollback, scale_replicas, patch_env

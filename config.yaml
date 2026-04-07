@@ -1,0 +1,29 @@
+pulse:
+  poll_interval_seconds: 15   # how often watcher checks services
+  bob_path: bob               # bob binary name in PATH
+
+# ── Your services ────────────────────────────────────────────────────────────
+# Add or remove services here. Ports must match mock_services.py (or your real services).
+services:
+  checkout-svc:
+    port: 8101
+    calls: [inventory-svc]
+
+  inventory-svc:
+    port: 8102
+    calls: [db-primary]
+
+  db-primary:
+    port: 8103
+    calls: []
+
+# ── Alert thresholds ─────────────────────────────────────────────────────────
+# Tune these per team. Watcher fires when ANY metric exceeds its threshold.
+thresholds:
+  error_rate_per_min: 10
+  latency_p99_ms: 500
+  memory_percent: 85
+  cpu_percent: 80            # CPU threshold — used for rulebook CPU incident
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+rulebook_path: rulebook.json

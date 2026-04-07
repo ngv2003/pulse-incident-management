@@ -1,0 +1,13 @@
+[
+  {
+    "id": "cpu-spike",
+    "description": "High CPU usage on a service pod",
+    "pattern": { "anomaly_type": "cpu_percent", "threshold": 80 },
+    "bob_verify": true,
+    "bob_verify_prompt": "CPU spike detected on {service}. Check kubectl top pods and recent logs. If single pod spike with confidence >= 80, restart it. If ALL pods have high CPU, escalate — do NOT restart, this is a code or config issue.",
+    "auto_resolve_confidence": 80,
+    "action": "restart_pod",
+    "confidence": 85,
+    "source_runbook": "IBM project-fortress compliance-runbooks"
+  }
+]

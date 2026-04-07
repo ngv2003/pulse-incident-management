@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "elevenlabs": {
+      "command": "./venv/bin/python",
+      "args": ["/Users/nikhilrajput/Documents/GitHub/scc-aggregator/server.py"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<your_github_token_here>"
+      }
+    }
+  }
+}

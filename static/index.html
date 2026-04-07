@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#09090e;
+  --surface:#0f0f17;
+  --card:#13131c;
+  --border:#1c1c2a;
+  --border2:#252535;
+  --text:#b8b8cc;
+  --dim:#4a4a6a;
+  --bright:#e2e2f2;
+  --red:#ff4560;
+  --red-bg:rgba(255,69,96,.1);
+  --amber:#f59e0b;
+  --amber-bg:rgba(245,158,11,.1);
+  --green:#10b981;
+  --green-bg:rgba(16,185,129,.08);
+  --blue:#3b82f6;
+  --blue-bg:rgba(59,130,246,.1);
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.6;overflow:hidden}
+
+.topbar{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.1em;color:var(--bright)}
+.logo em{color:var(--red);font-style:normal}
+.topbar-right{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.layout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 42px);margin-top:42px;overflow:hidden}
+
+.left{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-label{padding:12px 16px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.incident-list{flex:1;overflow-y:auto}
+.incident-list::-webkit-scrollbar{width:2px}
+.incident-list::-webkit-scrollbar-thumb{background:var(--border2)}
+
+.inc-card{padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative}
+.inc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.inc-card.red::before{background:var(--red)}
+.inc-card.amber::before{background:var(--amber)}
+.inc-card.green::before{background:var(--green)}
+.inc-card:hover{background:rgba(255,255,255,.02)}
+.inc-card.active{background:rgba(59,130,246,.05)}
+.inc-card.active::after{content:'';position:absolute;right:0;top:0;bottom:0;width:2px;background:var(--blue)}
+
+.inc-svc{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--bright);margin-bottom:3px}
+.inc-title{font-size:11px;color:var(--dim);margin-bottom:7px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inc-foot{display:flex;align-items:center;justify-content:space-between}
+
+.badge{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:2px;border:1px solid}
+.badge.investigating{background:var(--amber-bg);color:var(--amber);border-color:rgba(245,158,11,.25)}
+.badge.needs_action{background:var(--red-bg);color:var(--red);border-color:rgba(255,69,96,.25)}
+.badge.resolved,.badge.auto_resolved{background:var(--green-bg);color:var(--green);border-color:rgba(16,185,129,.2)}
+.badge.executing{background:var(--blue-bg);color:var(--blue);border-color:rgba(59,130,246,.25)}
+
+.inc-time{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+.right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+.rca-area{flex:0 0 52%;border-bottom:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rca-header{padding:18px 24px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.rca-svc{font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;letter-spacing:.06em}
+.rca-title{font-size:17px;font-weight:600;color:var(--bright);margin-bottom:10px;line-height:1.3}
+.rca-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rca-source{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+.rca-scroll{flex:1;overflow-y:auto;padding:0}
+.rca-scroll::-webkit-scrollbar{width:2px}
+.rca-scroll::-webkit-scrollbar-thumb{background:var(--border2)}
+
+.steps-block{padding:16px 24px;border-bottom:1px solid var(--border)}
+.block-label{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.steps-list{list-style:none;display:flex;flex-direction:column;gap:3px}
+.step{display:flex;align-items:flex-start;gap:8px;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.step-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0}
+.step-txt{font-family:var(--mono);font-size:11px;color:var(--text);flex:1}
+.step-ts{font-family:var(--mono);font-size:9px;color:var(--dim);white-space:nowrap}
+.bob-spinner{display:flex;align-items:center;gap:8px;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--amber)}
+.spin{width:9px;height:9px;border:1.5px solid var(--amber);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.rca-fields{padding:16px 24px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.field-val{font-size:12px;color:var(--bright);line-height:1.6}
+.field-val.mono{font-family:var(--mono);font-size:11px}
+
+.conf-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+.conf-bar{height:3px;width:120px;background:var(--border2);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.conf-fill.hi{background:var(--green)} .conf-fill.mid{background:var(--amber)} .conf-fill.lo{background:var(--red)}
+.conf-pct{font-family:var(--mono);font-size:11px;color:var(--bright)}
+
+.fix-badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green);background:var(--green-bg);border:1px solid rgba(16,185,129,.2);padding:4px 10px;border-radius:3px;margin-top:4px}
+
+.actions-block{padding:12px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap}
+.act-btn{font-family:var(--mono);font-size:11px;padding:6px 14px;border-radius:3px;border:1px solid;cursor:pointer;background:transparent;transition:all .15s}
+.act-btn.approve{border-color:var(--green);color:var(--green)}
+.act-btn.approve:hover{background:var(--green-bg)}
+.act-btn.dismiss{border-color:var(--border2);color:var(--dim)}
+.act-btn.dismiss:hover{border-color:var(--dim);color:var(--text)}
+.act-btn:disabled{opacity:.4;cursor:not-allowed}
+.executing-msg{font-family:var(--mono);font-size:10px;color:var(--amber);display:flex;align-items:center;gap:6px}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--dim)}
+.empty-icon{font-size:28px;opacity:.25}
+.empty p{font-family:var(--mono);font-size:11px;letter-spacing:.06em}
+
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.chat-header{padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.chat-context{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.06em}
+.chat-hint{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+.messages{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.messages::-webkit-scrollbar{width:2px}
+.messages::-webkit-scrollbar-thumb{background:var(--border2)}
+
+.msg{display:flex;flex-direction:column;gap:3px;animation:fadeUp .2s ease}
+.msg-role{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase}
+.msg.user .msg-role{color:var(--blue)}
+.msg.bob .msg-role{color:var(--amber)}
+.msg-bubble{font-size:12px;line-height:1.65;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 11px}
+.msg.user .msg-bubble{border-color:rgba(59,130,246,.2);background:var(--blue-bg)}
+.msg.bob .msg-bubble{border-color:rgba(245,158,11,.15)}
+
+.thinking{display:flex;gap:3px;padding:6px 0;align-items:center}
+.thinking span{width:4px;height:4px;border-radius:50%;background:var(--amber);animation:blink 1.1s infinite}
+.thinking span:nth-child(2){animation-delay:.2s}
+.thinking span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.15}40%{opacity:1}}
+
+.chat-no-incident{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-align:center}
+
+.chat-input-wrap{padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0}
+.chat-row{display:flex;gap:8px;align-items:flex-end}
+textarea.chat-in{flex:1;background:var(--card);border:1px solid var(--border2);border-radius:4px;color:var(--bright);font-family:var(--sans);font-size:12px;padding:8px 11px;resize:none;outline:none;transition:border-color .15s;min-height:36px;max-height:90px;line-height:1.5}
+textarea.chat-in:focus{border-color:var(--blue)}
+textarea.chat-in::placeholder{color:var(--dim)}
+.send-btn{background:var(--blue);border:none;border-radius:4px;color:#fff;font-family:var(--mono);font-size:11px;padding:8px 14px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.send-btn:hover{opacity:.85}
+.send-btn:disabled{opacity:.35;cursor:not-allowed}
+
+.no-inc{padding:28px 16px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);line-height:2}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">PULSE<em>.</em></div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span id="clock">--:--:--</span>
+    <span>·</span>
+    <span id="inc-count">0 incidents</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="left">
+    <div class="panel-label">
+      <span>Incidents</span>
+      <span id="active-tag" style="display:none;color:var(--red);font-size:9px">● ACTIVE</span>
+    </div>
+    <div class="incident-list" id="inc-list">
+      <div class="no-inc">Watching for incidents…<br>All services nominal.</div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="rca-area" id="rca-area">
+      <div class="empty" id="empty-state">
+        <div class="empty-icon">◎</div>
+        <p>Select an incident</p>
+      </div>
+
+      <div id="rca-view" style="display:none;flex-direction:column;height:100%">
+        <div class="rca-header">
+          <div class="rca-svc" id="rca-svc"></div>
+          <div class="rca-title" id="rca-title"></div>
+          <div class="rca-meta">
+            <span class="badge" id="rca-badge"></span>
+            <span class="rca-source" id="rca-source"></span>
+          </div>
+        </div>
+        <div class="rca-scroll" id="rca-scroll">
+          <div class="steps-block">
+            <div class="block-label">Investigation</div>
+            <ul class="steps-list" id="steps-list"></ul>
+            <div class="bob-spinner" id="bob-spinner" style="display:none">
+              <div class="spin"></div><span>BOB is investigating…</span>
+            </div>
+          </div>
+          <div class="rca-fields" id="rca-fields" style="display:none">
+            <div class="field"><div class="field-lbl">What happened</div><div class="field-val" id="f-what"></div></div>
+            <div class="field"><div class="field-lbl">Timeline</div><div class="field-val mono" id="f-timeline"></div></div>
+            <div class="field"><div class="field-lbl">Root cause</div><div class="field-val" id="f-root"></div></div>
+            <div class="field">
+              <div class="field-lbl">Confidence</div>
+              <div class="conf-row">
+                <div class="conf-bar"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+                <span class="conf-pct" id="conf-pct"></span>
+              </div>
+            </div>
+            <div class="field" id="f-fix-field" style="display:none">
+              <div class="field-lbl">BOB executed fix</div>
+              <div class="fix-badge" id="f-fix">✓ <span id="f-fix-text"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="actions-block" id="actions-block" style="display:none">
+          <div id="actions-row"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chat-area">
+      <div class="chat-header">
+        <span class="chat-context" id="chat-ctx">No incident selected</span>
+        <span class="chat-hint">Ask anything about this incident or your infra</span>
+      </div>
+      <div id="chat-no-inc" class="chat-no-incident">
+        <span style="font-size:22px;opacity:.2">⬡</span>
+        <span>Select an incident to start chatting with BOB</span>
+      </div>
+      <div id="chat-messages" class="messages" style="display:none"></div>
+      <div class="chat-input-wrap">
+        <div class="chat-row">
+          <textarea class="chat-in" id="chat-input"
+            placeholder="Ask BOB anything — incident details, infra status, kubectl queries…"
+            rows="1" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendChat()" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedId = null;
+let allIncidents = [];
+const chatCache = {};
+
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-GB', {hour12:false});
+}, 1000);
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso.endsWith('Z') ? iso : iso+'Z').getTime();
+  const m = Math.floor(diff/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m+'m ago';
+  return Math.floor(m/60)+'h ago';
+}
+function fmtTime(iso) {
+  if (!iso) return '';
+  return new Date(iso.endsWith('Z') ? iso : iso+'Z')
+    .toLocaleTimeString('en-GB', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+function colorClass(s) {
+  if (['resolved','auto_resolved'].includes(s)) return 'green';
+  if (s === 'investigating') return 'amber';
+  return 'red';
+}
+
+async function loadIncidents() {
+  try {
+    const r = await fetch('/api/incidents');
+    const incs = await r.json();
+    allIncidents = incs;
+    const count = incs.length;
+    document.getElementById('inc-count').textContent = count+' incident'+(count!==1?'s':'');
+    const active = incs.filter(i => !['resolved','auto_resolved'].includes(i.status)).length;
+    document.getElementById('active-tag').style.display = active > 0 ? 'block' : 'none';
+    renderList(incs);
+    if (selectedId) {
+      const updated = incs.find(i => i.id === selectedId);
+      if (updated) renderRCA(updated);
+    }
+  } catch(e) {}
+}
+
+function renderList(incs) {
+  const el = document.getElementById('inc-list');
+  if (!incs.length) { el.innerHTML = '<div class="no-inc">Watching for incidents…<br>All services nominal.</div>'; return; }
+  el.innerHTML = incs.map(inc => `
+    <div class="inc-card ${colorClass(inc.status)} ${selectedId===inc.id?'active':''}"
+         onclick="selectIncident('${inc.id}')">
+      <div class="inc-svc">${inc.service}</div>
+      <div class="inc-title" title="${inc.title}">${inc.title}</div>
+      <div class="inc-foot">
+        <span class="badge ${inc.status}">${inc.status.replace('_',' ')}</span>
+        <span class="inc-time">${timeAgo(inc.triggered_at)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function selectIncident(id) {
+  selectedId = id;
+  renderList(allIncidents);
+  const inc = allIncidents.find(i => i.id === id);
+  if (inc) {
+    document.getElementById('chat-ctx').textContent = 'Context: '+inc.service+' — '+inc.title.substring(0,50);
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('chat-no-inc').style.display = 'none';
+    document.getElementById('chat-messages').style.display = 'flex';
+  }
+  await loadDetail(id);
+}
+
+async function loadDetail(id) {
+  try {
+    const r = await fetch('/api/incidents/'+id);
+    const inc = await r.json();
+    renderRCA(inc);
+    chatCache[id] = inc.chat || [];
+    renderChat(chatCache[id]);
+  } catch(e) {}
+}
+
+function renderRCA(inc) {
+  document.getElementById('empty-state').style.display = 'none';
+  const view = document.getElementById('rca-view');
+  view.style.display = 'flex';
+  document.getElementById('rca-svc').textContent = inc.service;
+  document.getElementById('rca-title').textContent = inc.title;
+  const badge = document.getElementById('rca-badge');
+  badge.textContent = inc.status.replace('_',' ');
+  badge.className = 'badge '+inc.status;
+  document.getElementById('rca-source').textContent = 'via '+(inc.source||'watcher')+' · '+fmtTime(inc.triggered_at);
+
+  const steps = typeof inc.steps === 'string' ? JSON.parse(inc.steps) : (inc.steps||[]);
+  document.getElementById('steps-list').innerHTML = steps.map(s=>`
+    <li class="step"><div class="step-dot"></div><div class="step-txt">${s.text}</div><div class="step-ts">${fmtTime(s.ts)}</div></li>
+  `).join('');
+  document.getElementById('bob-spinner').style.display = inc.status === 'investigating' ? 'flex' : 'none';
+
+  const fieldsEl = document.getElementById('rca-fields');
+  if (inc.rca_what || inc.rca_root_cause) {
+    fieldsEl.style.display = 'flex';
+    document.getElementById('f-what').textContent = inc.rca_what || '—';
+    document.getElementById('f-timeline').textContent = inc.rca_timeline || '—';
+    document.getElementById('f-root').textContent = inc.rca_root_cause || '—';
+    const conf = inc.rca_confidence || 0;
+    const fill = document.getElementById('conf-fill');
+    fill.style.width = conf+'%';
+    fill.className = 'conf-fill '+(conf>=75?'hi':conf>=50?'mid':'lo');
+    document.getElementById('conf-pct').textContent = conf+'%';
+    const fix = inc.bob_executed_fix || inc.rca_action;
+    if (fix && fix.length > 3) {
+      document.getElementById('f-fix-field').style.display = 'flex';
+      document.getElementById('f-fix-text').textContent = fix.substring(0,140);
+    } else {
+      document.getElementById('f-fix-field').style.display = 'none';
+    }
+  } else {
+    fieldsEl.style.display = 'none';
+  }
+
+  // Action buttons — only for needs_action status.
+  // Show exactly ONE button with the raw action text from BOB.
+  // No client-side normalization — server enforces correct behaviour in pulse_api.py.
+  const recActions = typeof inc.recommended_actions === 'string'
+    ? JSON.parse(inc.recommended_actions) : (inc.recommended_actions||[]);
+  const actBlock = document.getElementById('actions-block');
+  const actRow = document.getElementById('actions-row');
+
+  if (recActions.length > 0 && inc.status === 'needs_action') {
+    actBlock.style.display = 'flex';
+    // Always take only the first action — one button, never more
+    const action = recActions[0];
+    actRow.innerHTML =
+      `<button class="act-btn approve" onclick="approveAction('${inc.id}', \`${action.replace(/`/g, "'")}\`)">✓ ${action}</button>` +
+      `<button class="act-btn dismiss" onclick="dismissAction('${inc.id}')">Dismiss</button>`;
+  } else {
+    actBlock.style.display = 'none';
+  }
+
+  const scroll = document.getElementById('rca-scroll');
+  setTimeout(() => scroll.scrollTop = scroll.scrollHeight, 100);
+}
+
+async function approveAction(id, action) {
+  const actRow = document.getElementById('actions-row');
+  actRow.innerHTML = '<div class="executing-msg"><div class="spin"></div> BOB is executing the fix…</div>';
+  try {
+    await fetch('/api/incidents/'+id+'/action', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action, approved:true})
+    });
+  } catch(e) {
+    actRow.innerHTML = '<div style="color:var(--red);font-family:var(--mono);font-size:10px">Error sending approval. Retry.</div>';
+  }
+}
+
+async function dismissAction(id) {
+  await fetch('/api/incidents/'+id+'/action', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'', approved:false})
+  });
+}
+
+function formatBobResponse(text) {
+  if (!text) return '';
+  text = text
+    .replace(/\[using tool attempt_completion.*?---output---/gs, '')
+    .replace(/---output---/g, '')
+    .replace(/\[using tool \w.*?\]/g, '')
+    .trim();
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  const lines = text.split('\n');
+  let html = '';
+  let inList = false;
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) { if (inList) { html += '</ol>'; inList = false; } html += '<br>'; continue; }
+    const listMatch = line.match(/^(\d+)[.)\s]+(.+)/);
+    if (listMatch) {
+      if (!inList) { html += '<ol style="margin:6px 0 6px 16px;padding:0">'; inList = true; }
+      html += '<li style="margin:3px 0;line-height:1.6">'+listMatch[2]+'</li>';
+    } else {
+      if (inList) { html += '</ol>'; inList = false; }
+      if (/^[A-Z][A-Z ]+:/.test(line)) {
+        html += '<div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--dim);margin:10px 0 4px;text-transform:uppercase">'+line+'</div>';
+      } else {
+        html += '<div style="margin:2px 0">'+line+'</div>';
+      }
+    }
+  }
+  if (inList) html += '</ol>';
+  return html || text;
+}
+
+function renderChat(messages) {
+  const el = document.getElementById('chat-messages');
+  if (!messages || !messages.length) { el.innerHTML = ''; return; }
+  el.innerHTML = messages.map(m=>`
+    <div class="msg ${m.role==='bob'?'bob':'user'}">
+      <div class="msg-role">${m.role==='bob'?'BOB':'You'}</div>
+      <div class="msg-bubble">${formatBobResponse(m.content)}</div>
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChat() {
+  if (!selectedId) return;
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  document.getElementById('send-btn').disabled = true;
+  if (!chatCache[selectedId]) chatCache[selectedId] = [];
+  chatCache[selectedId].push({role:'user', content:msg});
+  renderChat(chatCache[selectedId]);
+  const el = document.getElementById('chat-messages');
+  el.innerHTML += '<div class="msg bob"><div class="msg-role">BOB</div><div class="thinking"><span></span><span></span><span></span></div></div>';
+  el.scrollTop = el.scrollHeight;
+  try {
+    const r = await fetch('/api/incidents/'+selectedId+'/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message:msg})
+    });
+    const data = await r.json();
+    chatCache[selectedId] = data.messages || chatCache[selectedId];
+    renderChat(chatCache[selectedId]);
+  } catch(e) {
+    chatCache[selectedId].push({role:'bob', content:'Sorry, encountered an error. Please try again.'});
+    renderChat(chatCache[selectedId]);
+  }
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('chat-input').focus();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+loadIncidents();
+setInterval(async () => {
+  await loadIncidents();
+  if (selectedId) await loadDetail(selectedId);
+}, 2000);
+</script>
+</body>
+</html>
